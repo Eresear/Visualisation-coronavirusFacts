@@ -1,0 +1,36 @@
+[
+    {
+        "name":"Authorities",
+        "value":"Authorities"
+    },
+    {
+        "name":"Causes",
+        "value":"Causes"
+    },
+    {
+        "name":"Conspiracy theory",
+        "value":"Conspiracy theory"
+    },
+    {
+        "name":"Cures",
+        "value":"Cures"
+    },
+    {
+        "name":"Other",
+        "value":"Other"
+    },
+    {
+        "name":"Prevention",
+        "value":"Prevention"
+    },
+    {
+        "name":"Spread",
+        "value":"Spread"
+    },
+    {
+        "name":"Symptoms",
+        "value":"Symptoms"
+    }
+
+
+]
