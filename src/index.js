@@ -10,7 +10,7 @@ class App extends React.Component {
   render() {
     return (
       <div>
-        <HbarChart width={960} height={500} csvFile ={csvFile} ></HbarChart>
+        <HbarChart width={960} height={500} csvFile ={csvFile}  Category={category} Organization={organization}></HbarChart>
         <WordCloudChart csvFile={csvFile} Category={category} Organization={organization}></WordCloudChart>
       </div>
       

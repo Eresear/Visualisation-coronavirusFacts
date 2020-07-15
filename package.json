@@ -12,6 +12,7 @@
     "react": "^16.13.1",
     "react-dom": "^16.13.1",
     "react-scripts": "3.4.1",
+    "react-switch": "^5.0.1",
     "react-wordcloud": "^1.2.3",
     "wordcloud": "^1.1.1"
   },
