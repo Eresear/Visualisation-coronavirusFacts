@@ -1,65 +1,176 @@
 import React from "react";
 import WordCloud from "wordcloud";
 import * as d3 from "d3";
-import stopwords from '../config/stopwords.json';
+import stopwords from "../config/stopwords.json";
+import Typography from "@material-ui/core/Typography";
+import Slider from "@material-ui/core/Slider";
+import "./WordCloudChart.css";
+import { MDBTable, MDBTableBody, MDBTableHead } from "mdbreact";
+import '@fortawesome/fontawesome-free/css/all.min.css'; 
+import 'bootstrap-css-only/css/bootstrap.min.css'; 
+import 'mdbreact/dist/css/mdb.css';
+
+
 const styles = {
   fontFamily: "sans-serif",
-  textAlign: "center",
+  // textAlign: "center",
+  position: "relative",
+  width: "1000px",
+  height: "800px",
+  display: "flex",
 };
+
+const Header = [
+  {
+    label: "Resume",
+    field: "Resume",
+    sort: "asc",
+    minimal:"lg",
+  },
+  {
+    label: "Origin Url",
+    field: "Origin Url",
+    sort: "asc",
+    minimal:"sm",
+  },
+  {
+    label: "Fact-Check Url",
+    field: "Fact-Check Url",
+    sort: "asc",
+    minimal:"sm",
+  },
+];
 
 class WordCloudChart extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
-        topic: "",
-        factChecker: "",
-        keyWord: "",
-      };
-      this.handleTopicChange = this.handleTopicChange.bind(this);
-      this.handleCheckerChange = this.handleCheckerChange.bind(this);
-      this.handleKeyWordChange = this.handleKeyWordChange.bind(this);
+      topic: "",
+      factChecker: "",
+      keyWord: "",
+      font: 10,
+      frequencyRange: [1, 100],
+      maskData: null,
+      hiddenBox: true,
+      boxDim: null,
+      tableData: null,
+    };
+    this.handleTopicChange = this.handleTopicChange.bind(this);
+    this.handleCheckerChange = this.handleCheckerChange.bind(this);
+    this.handleKeyWordChange = this.handleKeyWordChange.bind(this);
+    this.handleFontChange = this.handleFontChange.bind(this);
+    this.handleFrequencyChange = this.handleFrequencyChange.bind(this);
+    this.handleMaskFileChange = this.handleMaskFileChange.bind(this);
+    this.showArticle = this.showArticle.bind(this);
+    this.drawBox = this.drawBox.bind(this);
+    
+  }
+
+  handleMaskFileChange(event) {
+    var url = window.URL.createObjectURL(event.target.files[0]);
+    var img = new Image();
+    img.src = url;
+    var width = this.props.width;
+    var height = this.props.height;
+    var imageData;
+    const changeState = this.setState.bind(this);
+    img.onload = function readPixels() {
+      window.URL.revokeObjectURL(url);
+
+      const maskCanvas = document.createElement("canvas");
+
+      maskCanvas.width = width;
+      maskCanvas.height = height;
+      var ctx = maskCanvas.getContext("2d");
+
+      ctx.drawImage(
+        img,
+        0,
+        0,
+        img.width,
+        img.height,
+        0,
+        0,
+        maskCanvas.width,
+        maskCanvas.height
+      );
+
+      imageData = ctx.getImageData(0, 0, maskCanvas.width, maskCanvas.height);
+
+      for (var i = 0; i < imageData.data.length; i += 4) {
+        var tone =
+          imageData.data[i] + imageData.data[i + 1] + imageData.data[i + 2];
+        var alpha = imageData.data[i + 3];
+
+        if (alpha < 128 || tone > 128 * 3) {
+          // Area not to draw
+          imageData.data[i] = imageData.data[i + 1] = imageData.data[
+            i + 2
+          ] = 255;
+          imageData.data[i + 3] = 0;
+        } else {
+          // Area to draw
+          imageData.data[i] = imageData.data[i + 1] = imageData.data[i + 2] = 0;
+          imageData.data[i + 3] = 255;
+        }
+      }
+      changeState({ maskData: imageData });
+    };
   }
   componentDidMount() {
     const csvFile = this.props.csvFile;
-   this.filterData(csvFile).then((data)=>{
-        this.drawChart(data);
+    this.filterData(csvFile).then((data) => {
+      this.drawChart(data);
     });
-   
   }
 
   handleTopicChange(event) {
     const csvFile = this.props.csvFile;
     this.setState({ topic: event.target.value }, () => {
-        this.filterData(csvFile).then((data)=>{
-            this.drawChart(data);
-        });
+      this.filterData(csvFile).then((data) => {
+        this.drawChart(data);
+      });
     });
   }
   handleCheckerChange(event) {
     const csvFile = this.props.csvFile;
     this.setState({ factChecker: event.target.value }, () => {
-        this.filterData(csvFile).then((data)=>{
-            this.drawChart(data);
-        });
+      this.filterData(csvFile).then((data) => {
+        this.drawChart(data);
+      });
+    });
+  }
+  handleFontChange(event, value) {
+    const csvFile = this.props.csvFile;
+    this.setState({ font: value }, () => {
+      this.filterData(csvFile).then((data) => {
+        this.drawChart(data);
+      });
     });
   }
   handleKeyWordChange(event) {
     const csvFile = this.props.csvFile;
     this.setState({ keyWord: event.target.value }, () => {
-        this.filterData(csvFile).then((data)=>{
-            this.drawChart(data);
-        });
+      this.filterData(csvFile).then((data) => {
+        this.drawChart(data);
+      });
     });
   }
-
+  handleFrequencyChange(event, newValue) {
+    const csvFile = this.props.csvFile;
+    this.setState({ frequencyRange: newValue }, () => {
+      this.filterData(csvFile).then((data) => {
+        this.drawChart(data);
+      });
+    });
+  }
   async filterData(csvFile) {
-      console.log("stop words",stopwords);
-
     let selectedTopic = this.state.topic;
     let factChecker = this.state.factChecker;
     let keyWord = this.state.keyWord;
     const dataRead = await d3.csv(csvFile);
     let counts = {};
+    let info = {};
     dataRead.forEach(function (d) {
       var content = d["What did you fact-check?"].toString().trim();
       if (
@@ -70,8 +181,13 @@ class WordCloudChart extends React.Component {
         (keyWord === "" || content.indexOf(keyWord) > 0)
       ) {
         var sentence = d["What did you fact-check?"].toString().trim();
+        var originUrl = d["Link to the original piece"].toString().trim();
+        var factCheckedUrl = d["URL to fact-checked article (in your language)"]
+          .toString()
+          .trim();
+
         var letters = sentence.match(/\b[^\d\W]+\b/g);
-        // console.log('letters',letters);
+
         letters.forEach((l) => {
           let word = l.toLowerCase();
           if (stopwords.includes(word)) {
@@ -82,61 +198,115 @@ class WordCloudChart extends React.Component {
           } else {
             counts[word]++;
           }
+          if (!info[word]) {
+            info[word] = [];
+            info[word].push([sentence, originUrl, factCheckedUrl]);
+          } else {
+            info[word].push([sentence, originUrl, factCheckedUrl]);
+          }
         });
-
-       
       }
     });
     var result = [];
-    console.log("count", counts);
+    var range = this.state.frequencyRange;
     Object.keys(counts).forEach(function (key) {
-      result.push([key, counts[key]]);
+      if (counts[key] >= range[0] && counts[key] <= range[1]) {
+        result.push([key, counts[key], info[key]]);
+      }
     });
 
-    console.log("result ", result);
     return result;
-    
-    // var options = {
-    //     list: result,
-    //     weightFactor: 15,
-    //     fontFamily: "Times, serif",
-    //     color: "random-dark",
-    //     rotateRatio: 0.5,
-    //     rotationSteps: 2,
-    //     backgroundColor: "#90B66A",
-    //     // drawMask:true,
-    //     // shape: function(theta) {
-    //     //     var max = 171;
-    //     //     var leng = [81,83,83,83,83,83,83,84,83,83,83,83,83,84,83,83,85,85,85,85,85,86,86,85,85,85,85,86,86,87,86,87,87,87,88,88,88,88,88,89,89,90,89,90,90,89,90,90,91,91,91,92,92,92,93,92,93,93,93,93,94,95,94,95,95,95,96,96,96,97,97,98,98,97,98,99,99,100,99,100,100,101,101,102,102,103,102,103,103,104,104,105,105,105,106,106,106,107,107,107,109,109,109,109,110,110,111,111,112,112,112,112,113,113,114,115,115,115,115,116,116,117,118,118,119,120,119,120,121,121,122,122,122,123,123,124,124,125,126,126,126,126,127,128,129,128,129,129,130,131,131,131,132,133,133,134,134,135,135,136,136,137,137,138,138,138,139,139,139,139,141,141,141,142,143,143,143,143,151,152,153,153,154,153,154,155,155,155,156,156,157,156,157,158,158,159,159,159,160,159,161,160,160,161,161,161,161,162,163,163,163,164,163,164,164,165,165,165,165,166,166,166,166,167,167,167,167,167,167,168,168,168,168,168,169,169,169,169,169,169,170,170,170,170,170,170,170,170,171,170,170,170,171,170,170,170,171,171,170,171,170,171,171,170,171,170,171,170,171,170,171,170,170,170,170,170,170,170,170,169,167,167,167,167,167,166,166,166,165,165,165,164,164,165,164,164,163,164,163,163,162,163,162,162,162,162,161,161,161,161,161,161,160,161,160,160,160,160,159,159,158,159,159,158,158,157,158,158,158,157,157,157,156,156,156,156,155,155,156,155,155,154,154,154,154,154,154,154,154,154,154,153,153,153,153,152,152,152,152,152,151,151,152,152,150,151,151,150,150,150,150,150,149,149,149,150,149,149,149,148,149,148,148,148,148,148,147,148,147,147,147,147,147,146,147,146,146,146,146,146,146,146,146,145,145,145,145,146,145,145,144,145,144,144,145,144,144,144,144,144,144,144,143,142,142,142,142,142,142,142,142,142,143,142,142,142,142,142,142,141,142,142,142,142,142,142,142,142,142,142,142,142,142,142,142,142,142,142,142,142,143,142,142,143,142,142,143,142,143,143,142,143,143,143,142,143,143,143,143,143,144,143,98,95,94,91,90,89,88,87,86,85,86,85,84,83,84,83,82,82,82,81,82,81,82,81,81,81,82,81,81,81,81,80,81,80,81,82,80,81,80,80,81,80,80,80,81,80,80,81,80,80,80,81,80,80,80,80,80,80,80,80,81,80,80,81,80,80,80,81,82,80,80,80,81,82,81,80,80,81,82,81,81,81,81,82,82,82,82,82,82,83,83];
+  }
+  changeCanvasBG(canvas, maskData) {
+    if (maskData !== null) {
+      var realctx = canvas.getContext("2d");
+      var bctx = document.createElement("canvas").getContext("2d");
 
-    //     //     return leng[(theta / (2 * Math.PI)) * leng.length | 0] / max;
-    //     //   },
-    //   };
+      bctx.fillStyle = this.props.backgroundColor || "#fff";
+      bctx.fillRect(0, 0, 1, 1);
+      var bgPixel = bctx.getImageData(0, 0, 1, 1).data;
 
-    //   WordCloud(this.refs["my-canvas"], options);
+      var newImageData = realctx.getImageData(
+        0,
+        0,
+        canvas.width,
+        canvas.height
+      );
 
+      for (var i = 0; i < maskData.data.length; i += 4) {
+        if (maskData.data[i + 3] > 128) {
+          // Area not to draw
+          newImageData.data[i] = bgPixel[0];
+          newImageData.data[i + 1] = bgPixel[1];
+          newImageData.data[i + 2] = bgPixel[2];
+          newImageData.data[i + 3] = bgPixel[3];
+        } else {
+          // Area to draw
+          newImageData.data[i] = bgPixel[0];
+          newImageData.data[i + 1] = bgPixel[1];
+          newImageData.data[i + 2] = bgPixel[2];
+          newImageData.data[i + 3] = bgPixel[3] ? bgPixel[3] - 1 : 0;
+        }
+      }
+      realctx.putImageData(newImageData, 0, 0);
+
+      realctx = bctx = bgPixel = newImageData = undefined;
+    }
   }
 
+  drawBox(item, dimension) {
 
+    if (!dimension) {
+      this.setState({hiddenBox:true});
+      return;
+    }
+
+
+    this.setState({hiddenBox:false, boxDim:{
+      left: dimension.x   + "px",
+      top: dimension.y   + "px",
+      width: dimension.w  + "px",
+      height: dimension.h  + "px",
+    }});
+
+  }
+  showArticle(item, dimension, event) {
+    console.log("item", item[2]);
+    var array = [];
+    item[2].forEach((element) => {
+      array.push({ "Resume": element[0],"Origin Url":element[1],"Fact-Check Url":element[2]
+       });
+    });
+    this.setState({ tableData: array });
+    console.log("state", this.state.tableData);
+  }
   drawChart(data) {
+    var font = this.state.font;
+    var color = this.props.color;
+    var backgroundColor = this.props.backgroundColor;
 
+    var options = {
+      list: data,
+      weightFactor: font,
+      fontFamily: "Times, serif",
+      color: color,
+      rotateRatio: 0.5,
+      rotationSteps: 2,
+      hover: this.drawBox,
+      click: this.showArticle,
+      clearCanvas: this.state.maskData !== null ? false : true,
+      backgroundColor: backgroundColor,
+    };
+    var canvas = this.refs["my-canvas"];
+    var maskImageData = this.state.maskData;
+    this.changeCanvasBG(canvas, maskImageData);
 
-      var options = {
-        list: data,
-        weightFactor: 10,
-        fontFamily: "Times, serif",
-        color: "random-dark",
-        rotateRatio: 0.5,
-        rotationSteps: 2,
-        backgroundColor: "#90B66A",
-      };
-
-      WordCloud(this.refs["my-canvas"], options);
+    WordCloud(this.refs["my-canvas"], options);
   }
   render() {
     return (
       <div id="wordCloud">
-          <div className="sticky svelte-odrhfj">
+        <div className="sticky svelte-odrhfj">
           <div className="sticky-contents svelte-odrhfj">
             <div className="filters-label svelte-odrhfj">
               Filter the wordcloud
@@ -156,9 +326,13 @@ class WordCloudChart extends React.Component {
                 onChange={this.handleTopicChange}
               >
                 <option value="">Any</option>
-                    {this.props.Category.map((e, key) => {
-                        return <option key={key} value={e.value}>{e.name}</option>;
-                    })}
+                {this.props.Category.map((e, key) => {
+                  return (
+                    <option key={key} value={e.value}>
+                      {e.name}
+                    </option>
+                  );
+                })}
               </select>
             </div>
             <div className="filter filter--type-dropdown svelte-x3l2dr">
@@ -169,18 +343,79 @@ class WordCloudChart extends React.Component {
               >
                 <option value="">Any</option>
                 {this.props.Organization.map((e, key) => {
-                        return <option key={key} value={e.value}>{e.name}</option>;
-                    })}
+                  return (
+                    <option key={key} value={e.value}>
+                      {e.name}
+                    </option>
+                  );
+                })}
               </select>
+            </div>
+            <div className="slider" style={{ marginLeft: "10px" }}>
+              <Typography id="discrete-slider-small-steps" gutterBottom>
+                Font size
+              </Typography>
+              <Slider
+                defaultValue={10}
+                step={1}
+                min={1}
+                max={100}
+                onChangeCommitted={this.handleFontChange}
+                valueLabelDisplay="auto"
+              />
+            </div>
+
+            <div
+              className="slider"
+              style={{ marginLeft: "20px", width: "280px" }}
+            >
+              <Typography id="range-slider" gutterBottom>
+                Frequency range
+              </Typography>
+              <Slider
+                value={this.state.frequencyRange}
+                onChange={this.handleFrequencyChange}
+                min={1}
+                step={1}
+                max={1000}
+                valueLabelDisplay="auto"
+                aria-labelledby="range-slider"
+              />
             </div>
           </div>
         </div>
+        <div style={{ textAlign: "center" ,height: "30px"}}  >
+          <input type="file" onChange={this.handleMaskFileChange} height="40"></input>
+        </div>
         <div style={styles}>
-          <canvas ref="my-canvas" width="760px" height="480px"></canvas>
+          <canvas
+            ref="my-canvas"
+            width={this.props.width + "px"}
+            height={this.props.height + "px"}
+          ></canvas>
+          {this.state.hiddenBox===false?  <div id="box" style={this.state.boxDim} />:null}
+         
+          <div style={{verticalAlign:"middle"}}>
+
+              <MDBTable scrollY   maxHeight={this.props.height+'px'} striped bordered>
+                <MDBTableHead columns={Header}  color="primary-color" textWhite/>
+               
+                  <MDBTableBody rows={this.state.tableData} />
+              </MDBTable>
+
+          </div>
+         
         </div>
       </div>
     );
   }
 }
+
+WordCloudChart.defaultProps = {
+  color: "#f0f0c0",
+  backgroundColor: "#001f00",
+  width: 1000,
+  height: 800,
+};
 
 export default WordCloudChart;

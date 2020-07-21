@@ -1,0 +1,16 @@
+#box {
+    pointer-events: none;
+    position: absolute;
+    box-shadow: 0 0 200px 200px rgba(255, 255, 255, 0.5);
+    border-radius: 50px;
+    cursor: pointer; 
+  }
+
+  /* .canvas > span:hover {
+    text-shadow: 0 0 10px, 0 0 10px #fff, 0 0 10px #fff, 0 0 10px #fff;
+    opacity: 0.5;
+  } */
+
+*[hidden] {
+display: none;
+}
