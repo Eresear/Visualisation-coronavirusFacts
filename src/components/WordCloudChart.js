@@ -48,8 +48,8 @@ class WordCloudChart extends React.Component {
       topic: "",
       factChecker: "",
       keyWord: "",
-      font: 10,
-      frequencyRange: [1, 100],
+      font: 30,
+      frequencyRange: [10, 1000],
       maskData: null,
       hiddenBox: true,
       boxDim: null,
@@ -63,6 +63,9 @@ class WordCloudChart extends React.Component {
     this.handleMaskFileChange = this.handleMaskFileChange.bind(this);
     this.showArticle = this.showArticle.bind(this);
     this.drawBox = this.drawBox.bind(this);
+    
+    this.weightFactor = this.weightFactor.bind(this);
+
     
   }
 
@@ -282,12 +285,13 @@ class WordCloudChart extends React.Component {
   }
   drawChart(data) {
     var font = this.state.font;
+    var range = this.state.frequencyRange;
     var color = this.props.color;
     var backgroundColor = this.props.backgroundColor;
 
     var options = {
       list: data,
-      weightFactor: font,
+      weightFactor: this.weightFactor,
       fontFamily: "Times, serif",
       color: color,
       rotateRatio: 0.5,
@@ -302,6 +306,14 @@ class WordCloudChart extends React.Component {
     this.changeCanvasBG(canvas, maskImageData);
 
     WordCloud(this.refs["my-canvas"], options);
+  }
+  weightFactor(wordCount){
+    //normalizartion 
+    var limit = this.state.frequencyRange;
+    var min = limit[0];
+    var max = limit[1];
+    var fontsize = this.state.font;
+    return ((wordCount-min )/(max-min))*(150-fontsize) +fontsize;
   }
   render() {
     return (
@@ -356,10 +368,10 @@ class WordCloudChart extends React.Component {
                 Font size
               </Typography>
               <Slider
-                defaultValue={10}
-                step={1}
-                min={1}
-                max={100}
+                defaultValue={this.state.font}
+                step={5}
+                min={20}
+                max={150}
                 onChangeCommitted={this.handleFontChange}
                 valueLabelDisplay="auto"
               />
@@ -376,8 +388,8 @@ class WordCloudChart extends React.Component {
                 value={this.state.frequencyRange}
                 onChange={this.handleFrequencyChange}
                 min={1}
-                step={1}
-                max={1000}
+                step={5}
+                max={2000}
                 valueLabelDisplay="auto"
                 aria-labelledby="range-slider"
               />
