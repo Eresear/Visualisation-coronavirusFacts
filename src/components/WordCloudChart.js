@@ -19,6 +19,9 @@ const styles = {
   height: "800px",
   display: "flex",
 };
+const linkStyle ={
+  color: 'blue',
+}
 
 const Header = [
   {
@@ -50,6 +53,7 @@ class WordCloudChart extends React.Component {
       keyWord: "",
       font: 30,
       frequencyRange: [10, 1000],
+      frequencyMax:1,
       maskData: null,
       hiddenBox: true,
       boxDim: null,
@@ -174,8 +178,10 @@ class WordCloudChart extends React.Component {
     const dataRead = await d3.csv(csvFile);
     let counts = {};
     let info = {};
+     var maxCount =1;
     dataRead.forEach(function (d) {
       var content = d["What did you fact-check?"].toString().trim();
+     
       if (
         (selectedTopic === "" ||
           d.Category.toString().trim() === selectedTopic) &&
@@ -190,6 +196,7 @@ class WordCloudChart extends React.Component {
           .trim();
 
         var letters = sentence.match(/\b[^\d\W]+\b/g);
+      
 
         letters.forEach((l) => {
           let word = l.toLowerCase();
@@ -200,6 +207,9 @@ class WordCloudChart extends React.Component {
             counts[word] = 1;
           } else {
             counts[word]++;
+            if(counts[word]>maxCount){
+              maxCount = counts[word];
+            }
           }
           if (!info[word]) {
             info[word] = [];
@@ -210,7 +220,9 @@ class WordCloudChart extends React.Component {
         });
       }
     });
+
     var result = [];
+    this.setState({frequencyMax:maxCount});
     var range = this.state.frequencyRange;
     Object.keys(counts).forEach(function (key) {
       if (counts[key] >= range[0] && counts[key] <= range[1]) {
@@ -277,7 +289,7 @@ class WordCloudChart extends React.Component {
     console.log("item", item[2]);
     var array = [];
     item[2].forEach((element) => {
-      array.push({ "Resume": element[0],"Origin Url":element[1],"Fact-Check Url":element[2]
+    array.push({ "Resume": element[0],"Origin Url":<a href={ element[1] } style={linkStyle} >{element[1]} </a>,"Fact-Check Url": <a href={ element[2] } style={linkStyle}>{element[2]}</a>
        });
     });
     this.setState({ tableData: array });
@@ -389,7 +401,7 @@ class WordCloudChart extends React.Component {
                 onChange={this.handleFrequencyChange}
                 min={1}
                 step={5}
-                max={2000}
+                max={this.state.frequencyMax}
                 valueLabelDisplay="auto"
                 aria-labelledby="range-slider"
               />

@@ -11,6 +11,22 @@
     opacity: 0.5;
   } */
 
+  a {
+    color: #FFF;
+  }
+  a:hover {
+     color: #00F
+  }
+/* visited link */
+a:visited {
+  color: green;
+}
+
+/* selected link */
+a:active {
+  color: blue;
+}
+
 *[hidden] {
 display: none;
 }
