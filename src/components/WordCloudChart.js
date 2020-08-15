@@ -9,6 +9,9 @@ import { MDBTable, MDBTableBody, MDBTableHead } from "mdbreact";
 import '@fortawesome/fontawesome-free/css/all.min.css'; 
 import 'bootstrap-css-only/css/bootstrap.min.css'; 
 import 'mdbreact/dist/css/mdb.css';
+import skmeans from "skmeans";
+import wordVecs from "./wordvector.js";
+
 
 
 const styles = {
@@ -46,18 +49,31 @@ const Header = [
 
 class WordCloudChart extends React.Component {
   constructor(props) {
+
     super(props);
+
+    this.cosinesim = this.cosinesim.bind(this);
+    var wordVector = [];
+    for (const key in wordVecs) {
+      if (wordVecs.hasOwnProperty(key)) {
+        const element = wordVecs[key];
+        wordVector.push(element);
+      }
+    }
+    var cluster = skmeans(wordVector, 12, null, null, this.cosinesim);
+    console.log("cluster ", cluster);
     this.state = {
       topic: "",
       factChecker: "",
       keyWord: "",
       font: 30,
-      frequencyRange: [10, 1000],
-      frequencyMax:1,
+      frequencyRange: [1, 1000],
+      frequencyMax:1000,
       maskData: null,
       hiddenBox: true,
       boxDim: null,
       tableData: null,
+      cluster:cluster,
     };
     this.handleTopicChange = this.handleTopicChange.bind(this);
     this.handleCheckerChange = this.handleCheckerChange.bind(this);
@@ -67,10 +83,28 @@ class WordCloudChart extends React.Component {
     this.handleMaskFileChange = this.handleMaskFileChange.bind(this);
     this.showArticle = this.showArticle.bind(this);
     this.drawBox = this.drawBox.bind(this);
-    
+    this.clustercolor = this.clustercolor.bind(this);
+
     this.weightFactor = this.weightFactor.bind(this);
+    
+   
+
 
     
+  }
+  cosinesim(A, B) {
+    var dotproduct = 0;
+    var mA = 0;
+    var mB = 0;
+    for (var i = 0; i < A.length; i++) {
+      dotproduct += A[i] * B[i];
+      mA += A[i] * A[i];
+      mB += B[i] * B[i];
+    }
+    mA = Math.sqrt(mA);
+    mB = Math.sqrt(mB);
+    var similarity = (dotproduct / mA) * mB;
+    return similarity;
   }
 
   handleMaskFileChange(event) {
@@ -232,6 +266,28 @@ class WordCloudChart extends React.Component {
 
     return result;
   }
+  color(word, weight, fontSize, distance, theta){
+    var H = theta / (2*Math.PI ) *360;
+    var s = 100;
+    var l  =50;
+    return 'hsl('+ H +','+s + '%,'+l +'%)';
+  }
+  clustercolor(word, weight, fontSize, distance, theta){
+    var H = 360;
+    var s = 100;
+    var l  =50;
+    if(typeof wordVecs[word]  !== "undefined"){
+    
+      var result = this.state.cluster.test(wordVecs[word],this.cosinesim);
+
+      // var result = res.test(wordVecs["china"],this.cosinesim);
+      var cluster = result.idx;
+      var clusterNb = 12;
+      H = ( 360/clusterNb +2 ) * cluster;
+    };
+   
+    return 'hsl('+ H +','+s + '%,'+l +'%)';
+  }
   changeCanvasBG(canvas, maskData) {
     if (maskData !== null) {
       var realctx = canvas.getContext("2d");
@@ -286,33 +342,33 @@ class WordCloudChart extends React.Component {
 
   }
   showArticle(item, dimension, event) {
-    console.log("item", item[2]);
     var array = [];
     item[2].forEach((element) => {
     array.push({ "Resume": element[0],"Origin Url":<a href={ element[1] } style={linkStyle} >{element[1]} </a>,"Fact-Check Url": <a href={ element[2] } style={linkStyle}>{element[2]}</a>
        });
     });
     this.setState({ tableData: array });
-    console.log("state", this.state.tableData);
   }
   drawChart(data) {
-    var font = this.state.font;
-    var range = this.state.frequencyRange;
-    var color = this.props.color;
+    // var color = this.props.color;
     var backgroundColor = this.props.backgroundColor;
-
+   data =  data.sort( function (a,b) {
+    return   a[0].localeCompare(b[0]);
+    });
     var options = {
       list: data,
       weightFactor: this.weightFactor,
       fontFamily: "Times, serif",
-      color: color,
+      color: this.clustercolor,
       rotateRatio: 0.5,
       rotationSteps: 2,
+      shuffle:false,
       hover: this.drawBox,
       click: this.showArticle,
       clearCanvas: this.state.maskData !== null ? false : true,
       backgroundColor: backgroundColor,
     };
+
     var canvas = this.refs["my-canvas"];
     var maskImageData = this.state.maskData;
     this.changeCanvasBG(canvas, maskImageData);
@@ -380,7 +436,7 @@ class WordCloudChart extends React.Component {
                 Font size
               </Typography>
               <Slider
-                defaultValue={this.state.font}
+                defaultValue={30}
                 step={5}
                 min={20}
                 max={150}
@@ -440,6 +496,7 @@ WordCloudChart.defaultProps = {
   backgroundColor: "#001f00",
   width: 1000,
   height: 800,
+  
 };
 
 export default WordCloudChart;
