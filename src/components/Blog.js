@@ -2,7 +2,6 @@ import React from "react";
 
 
 import Papa from 'papaparse';
-import Button from 'react-bootstrap/Button';
 import './Blog.css';
 class Blog extends React.Component {
     constructor(props) {
@@ -15,16 +14,8 @@ class Blog extends React.Component {
         };
 
         this.sortData = this.sortData.bind(this);
-        this.handleUpdate = this.handleUpdate.bind(this);
     }
-    handleUpdate(){
-        Papa.parse("https://pudding.cool/misc/covid-fact-checker/data.csv", {
-            download:true,
-            complete: this.sortData,
-            header:true,
-        });
-
-    }
+  
     // update(result){
     //     var newArticles = result.data.sort(function(a,b){
     //         // Turn your strings into dates, and then subtract them
@@ -107,7 +98,7 @@ class Blog extends React.Component {
             
         return (
             <div>
-                <h3>Lastest articles    <Button variant="outline-success" onClick={this.handleUpdate}   >update</Button>{' '}</h3>
+                <h3>Lastest articles   </h3>
                
                     <div className="post-wrapper container">
                         {stationsArr}

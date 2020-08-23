@@ -273,17 +273,17 @@ class WordCloudChart extends React.Component {
     return 'hsl('+ H +','+s + '%,'+l +'%)';
   }
   clustercolor(word, weight, fontSize, distance, theta){
-    var H = 360;
+    var H = 0;
     var s = 100;
     var l  =50;
     if(typeof wordVecs[word]  !== "undefined"){
     
       var result = this.state.cluster.test(wordVecs[word],this.cosinesim);
 
-      // var result = res.test(wordVecs["china"],this.cosinesim);
       var cluster = result.idx;
       var clusterNb = 12;
-      H = ( 360/clusterNb +2 ) * cluster;
+      H = ( 360/clusterNb +1) * cluster;
+      // console.log(" belong cluster ",cluster);
     };
    
     return 'hsl('+ H +','+s + '%,'+l +'%)';
